@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 from src.features.schema import GameToken, FEATURE_NAMES, FEATURE_DIM
 
@@ -18,6 +19,30 @@ EXPANSION_FIRST_SEASONS = {
     "VGK": "20172018",  # Vegas Golden Knights
     "SEA": "20212022",  # Seattle Kraken
 }
+
+# Cache of team ID -> abbreviation fetched from the API
+_TEAM_ABBREV_CACHE: dict[int, str] = {}
+
+
+def _get_team_abbrevs() -> dict[int, str]:
+    global _TEAM_ABBREV_CACHE
+    if _TEAM_ABBREV_CACHE:
+        return _TEAM_ABBREV_CACHE
+    cache_path = RAW_DIR / "teams.json"
+    if cache_path.exists():
+        data = json.loads(cache_path.read_text())
+    else:
+        resp = requests.get(
+            "https://api.nhle.com/stats/rest/en/team",
+            params={"limit": -1},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json().get("data", [])
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(data, indent=2))
+    _TEAM_ABBREV_CACHE = {t["id"]: t["triCode"] for t in data}
+    return _TEAM_ABBREV_CACHE
 
 
 def _parse_date(date_str: str) -> datetime:
@@ -48,41 +73,43 @@ def parse_game_record(record: dict, season: str) -> tuple[GameToken, GameToken] 
 
     Returns None if the record is incomplete or should be skipped.
     The raw record format comes from: api.nhle.com/stats/rest/en/game
+    Fields: id, gameDate, homeTeamId, visitingTeamId, homeScore, visitingScore, period
     """
-    # Required fields
+    team_abbrevs = _get_team_abbrevs()
+
     game_id = str(record.get("id", ""))
     if not game_id:
-        return None
-
-    home_team = record.get("homeTeam", {})
-    away_team = record.get("visitingTeam", {})
-    if not home_team or not away_team:
         return None
 
     date_str = record.get("gameDate", "")
     if not date_str:
         return None
 
+    home_team_id = record.get("homeTeamId")
+    away_team_id = record.get("visitingTeamId")
+    if home_team_id is None or away_team_id is None:
+        return None
+
     home_score = _safe_int(record.get("homeScore"))
     away_score = _safe_int(record.get("visitingScore"))
-    period_type = record.get("lastPeriodType", "REG")
-    ot_game = 1 if period_type in ("OT", "SO") else 0
+
+    # period: 3=regulation, 4=OT, 5=SO
+    period = _safe_int(record.get("period"), default=3)
+    ot_game = 1 if period > 3 else 0
 
     home_win = 1 if home_score > away_score else 0
     away_win = 1 - home_win
 
-    home_id = str(home_team.get("id", ""))
-    away_id = str(away_team.get("id", ""))
-    home_abbrev = home_team.get("abbrev", "")
-    away_abbrev = away_team.get("abbrev", "")
+    home_abbrev = team_abbrevs.get(home_team_id, str(home_team_id))
+    away_abbrev = team_abbrevs.get(away_team_id, str(away_team_id))
 
     def make_token(is_home: bool) -> GameToken:
         gf = home_score if is_home else away_score
         ga = away_score if is_home else home_score
         win = home_win if is_home else away_win
-        team_id = home_id if is_home else away_id
+        team_id = str(home_team_id if is_home else away_team_id)
         team_abbrev = home_abbrev if is_home else away_abbrev
-        opp_id = away_id if is_home else home_id
+        opp_id = str(away_team_id if is_home else home_team_id)
         opp_abbrev = away_abbrev if is_home else home_abbrev
 
         return GameToken(
@@ -94,7 +121,7 @@ def parse_game_record(record: dict, season: str) -> tuple[GameToken, GameToken] 
             opponent_id=opp_id,
             opponent_abbrev=opp_abbrev,
             date=date_str[:10],
-            game_number=0,  # will be filled in by sequence builder
+            game_number=0,  # filled in by compute_rest_days
             goals_for=gf,
             goals_against=ga,
             win=win,
@@ -191,5 +218,5 @@ def process_all_seasons(seasons: list[str]) -> pd.DataFrame:
 
 if __name__ == "__main__":
     from src.fetch.download import season_str
-    seasons = [season_str(y) for y in range(2011, 2025)]
+    seasons = [season_str(y) for y in range(2011, 2026)]
     process_all_seasons(seasons)

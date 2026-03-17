@@ -103,8 +103,9 @@ def build_examples(
 
     # Each game appears twice in df (once per team). Reconstruct game-level view.
     # Build game-level df: one row per game with home_team and away_team info.
-    home_df = df[df["is_home"] == 1.0][META_COLS + ["date", "game_id", "team_id", "team_abbrev", "goals_for", "goals_against"]].copy()
-    away_df = df[df["is_home"] == 0.0][META_COLS + ["date", "game_id", "team_id", "team_abbrev", "goals_for", "goals_against"]].copy()
+    game_cols = ["game_id", "date", "team_id", "team_abbrev", "goals_for", "goals_against"]
+    home_df = df[df["is_home"] == 1.0][game_cols].copy()
+    away_df = df[df["is_home"] == 0.0][game_cols].copy()
 
     games = home_df.merge(
         away_df,

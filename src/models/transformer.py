@@ -65,7 +65,9 @@ class TransformerEncoder(BaseSequenceModel):
             dropout=dropout,
             batch_first=True,
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer, num_layers=num_layers, enable_nested_tensor=False
+        )
         self.norm = nn.LayerNorm(d_model)
         self.dropout_layer = nn.Dropout(dropout)
 
