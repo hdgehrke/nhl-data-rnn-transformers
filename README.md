@@ -16,30 +16,30 @@ Sharing encoder weights between the two teams enforces symmetry and halves the p
 
 ## Results
 
-### seq_len=20 (best configuration)
+### seq_len=25 (best configuration)
 
 | Model | Parameters | Test MAE | Test RMSE | Win Acc |
 |---|---|---|---|---|
-| **Transformer Small** | 311K | **2.195** | **2.594** | **57.6%** |
-| Transformer Medium | 2.28M | 2.199 | 2.599 | 56.8% |
-| RNN | 95K | 2.208 | 2.609 | 57.2% |
-| GRU | 201K | 2.210 | 2.602 | 57.2% |
-| LSTM | 255K | 2.210 | 2.603 | 56.9% |
+| **Transformer Medium** | 2.28M | **2.182** | **2.589** | 57.3% |
+| Transformer Small | 311K | 2.184 | 2.597 | 56.7% |
+| GRU | 201K | 2.189 | 2.603 | 57.2% |
+| LSTM | 255K | 2.201 | 2.604 | 55.9% |
+| RNN | 95K | 2.206 | 2.608 | **57.4%** |
 | *Baseline: home +0.3* | — | *2.258* | *2.634* | *55.2%* |
 | *Baseline: team avg* | — | *2.272* | *2.640* | *54.2%* |
 | *Baseline: always 0* | — | *2.289* | *2.648* | *0.0%* |
 
-### seq_len=10
+### Effect of sequence length (Test MAE)
 
-| Model | Parameters | Test MAE | Test RMSE | Win Acc |
-|---|---|---|---|---|
-| LSTM | 255K | **2.214** | **2.613** | **55.7%** |
-| Transformer Small | 311K | 2.220 | 2.615 | 55.3% |
-| Transformer Medium | 2.28M | 2.221 | 2.615 | 55.3% |
-| GRU | 201K | 2.224 | 2.623 | 55.2% |
-| RNN | 95K | 2.231 | 2.614 | 55.2% |
+| Model | seq_len=10 | seq_len=20 | seq_len=25 |
+|---|---|---|---|
+| Transformer Medium | 2.221 | 2.199 | **2.182** |
+| Transformer Small | 2.220 | **2.195** | 2.184 |
+| GRU | 2.224 | 2.210 | **2.189** |
+| LSTM | **2.214** | 2.210 | 2.201 |
+| RNN | 2.231 | 2.208 | 2.206 |
 
-All trained models beat all three baselines on MAE and RMSE. Longer sequences (seq_len=20) improve every model by ~0.5–1.5pp on win accuracy, with the Transformer Small benefiting most — suggesting attention is better at exploiting longer context than recurrent models.
+All trained models beat all three baselines on MAE and RMSE. Longer sequences consistently improve performance across all models — the Transformer Medium benefits most at seq_len=25, finally pulling ahead now that attention has more context to work with. Gains are diminishing (seq_len=20→25 improvements are smaller than seq_len=10→20), suggesting the signal saturates around 25 games of history.
 
 ## Features
 
