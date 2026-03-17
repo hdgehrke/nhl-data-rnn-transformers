@@ -1,0 +1,16 @@
+data/raw/
+data/processed/
+mlruns/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+*.npz
+*.h5
+*.hdf5

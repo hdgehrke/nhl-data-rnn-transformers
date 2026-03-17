@@ -1,0 +1,27 @@
+model_type: transformer
+run_name: transformer_small
+experiment: nhl_transformer_small
+
+# Architecture
+d_model: 128
+nhead: 4
+num_layers: 2
+ffn_dim: 256
+dropout: 0.1
+head_hidden_dim: 128
+
+# Sequence
+seq_len: 10
+
+# Training
+lr: 0.0005
+weight_decay: 0.0001
+batch_size: 256
+epochs: 50
+patience: 10
+
+# Data splits
+val_date: "2022-10-01"
+test_date: "2023-10-01"
+train_start: 2011
+train_end: 2024
