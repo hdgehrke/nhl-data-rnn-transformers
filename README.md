@@ -7,27 +7,39 @@ An end-to-end machine learning pipeline that predicts NHL game **goal differenti
 Each game is represented as a pair of sequences — one for each team — where each element in the sequence is a vector of stats from one of that team's recent games. A shared encoder (RNN, LSTM, GRU, or Transformer) reads each team's sequence independently and produces a fixed-size embedding. The two embeddings are then concatenated and passed through an MLP head to predict the final goal differential.
 
 ```
-Team A: [game_1, ..., game_10] → Encoder → embed_A
-Team B: [game_1, ..., game_10] → Encoder → embed_B
+Team A: [game_1, ..., game_N] → Encoder → embed_A
+Team B: [game_1, ..., game_N] → Encoder → embed_B
 [embed_A, embed_B, context] → MLP → predicted goal differential
 ```
 
 Sharing encoder weights between the two teams enforces symmetry and halves the parameter count.
 
-## Models
+## Results
+
+### seq_len=20 (best configuration)
 
 | Model | Parameters | Test MAE | Test RMSE | Win Acc |
 |---|---|---|---|---|
-| LSTM | 255K | **2.214** | **2.613** | **55.7%** |
-| Transformer Medium | 2.28M | 2.221 | 2.615 | 55.3% |
-| Transformer Small | 311K | 2.220 | 2.615 | 55.3% |
-| GRU | 201K | 2.224 | 2.623 | 55.2% |
-| RNN | 95K | 2.231 | 2.614 | 55.2% |
+| **Transformer Small** | 311K | **2.195** | **2.594** | **57.6%** |
+| Transformer Medium | 2.28M | 2.199 | 2.599 | 56.8% |
+| RNN | 95K | 2.208 | 2.609 | 57.2% |
+| GRU | 201K | 2.210 | 2.602 | 57.2% |
+| LSTM | 255K | 2.210 | 2.603 | 56.9% |
 | *Baseline: home +0.3* | — | *2.258* | *2.634* | *55.2%* |
 | *Baseline: team avg* | — | *2.272* | *2.640* | *54.2%* |
 | *Baseline: always 0* | — | *2.289* | *2.648* | *0.0%* |
 
-All trained models beat all three baselines on MAE and RMSE. The LSTM leads overall despite being outweighed by the Transformers.
+### seq_len=10
+
+| Model | Parameters | Test MAE | Test RMSE | Win Acc |
+|---|---|---|---|---|
+| LSTM | 255K | **2.214** | **2.613** | **55.7%** |
+| Transformer Small | 311K | 2.220 | 2.615 | 55.3% |
+| Transformer Medium | 2.28M | 2.221 | 2.615 | 55.3% |
+| GRU | 201K | 2.224 | 2.623 | 55.2% |
+| RNN | 95K | 2.231 | 2.614 | 55.2% |
+
+All trained models beat all three baselines on MAE and RMSE. Longer sequences (seq_len=20) improve every model by ~0.5–1.5pp on win accuracy, with the Transformer Small benefiting most — suggesting attention is better at exploiting longer context than recurrent models.
 
 ## Features
 
