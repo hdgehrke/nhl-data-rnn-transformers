@@ -41,6 +41,33 @@ Sharing encoder weights between the two teams enforces symmetry and halves the p
 
 All trained models beat all three baselines at every sequence length. The Transformer Small continues to improve through seq_len=45 (2.149 MAE, 59.1% win acc) with no sign of saturation — attention benefits most from longer context. The LSTM rebounds strongly at longer sequences, nearly matching the GRU by seq_len=45. The RNN is unreliable beyond seq_len=30, oscillating rather than improving consistently. The best model (Transformer Small, seq_len=45) beats the strongest baseline (home +0.3) by 0.109 MAE, compared to only 0.044 at seq_len=10.
 
+## NBA Cross-Sport Transfer
+
+A final NHL model was trained on all seasons 2011–2024 (no test holdout) and then evaluated on NBA game data to test whether momentum/form patterns learned from hockey generalize to basketball.
+
+**Feature mapping**: NBA box score stats are mapped onto the shared 28-feature GameToken schema. Shared features (points for/against, shots/FGA, blocks, steals/takeaways, turnovers/giveaways, home/away, rest days) are populated; NHL-specific features (hits, Corsi, Fenwick, xGoals, power-play stats) are zero-filled.
+
+**NBA data**: 10 seasons (2015–2025), split into train 2015–2021, val 2021-22, test 2022–2024 (3,685 games).
+
+| Model | MAE | RMSE | Win Acc |
+|---|---|---|---|
+| **Fine-tuned NHL→NBA** | **10.79** | **13.80** | **64.6%** |
+| Zero-shot NHL→NBA | 11.94 | 14.97 | 64.0% |
+| *Baseline: home +3.0* | *11.96* | *15.10* | *55.6%* |
+| *Baseline: always 0* | *12.16* | *15.22* | *0.0%* |
+
+**Key finding**: The NHL zero-shot model already beats both baselines on win direction accuracy (**64.0% vs 55.6%**), suggesting that sequential momentum and home/away form patterns learned from hockey genuinely transfer to basketball. Fine-tuning on NBA training data improves MAE (adapting to the larger NBA point scale) and nudges win accuracy to 64.6%, but the bulk of the directional signal was already present in the pretrained NHL weights.
+
+To reproduce:
+```bash
+# Download and process NBA data
+python -m src.fetch.nba_client --start 2015 --end 2024
+python -m src.features.nba_tokenizer
+
+# Run transfer eval (zero-shot + fine-tune)
+python -m src.eval.nba_transfer --nhl-run-id <mlflow_run_id>
+```
+
 ## Features
 
 Each game token is a 28-dimensional vector including:
@@ -57,13 +84,13 @@ nhl-data-rnn-transformers/
 │   ├── raw/              # Raw JSON from NHL API (gitignored)
 │   └── processed/        # Parquet files per season (gitignored)
 ├── src/
-│   ├── fetch/            # NHL API client and download CLI
-│   ├── features/         # GameToken schema, tokenizer, sequence builder,
-│   │                     #   normalization, PyTorch Dataset
+│   ├── fetch/            # NHL + NBA API clients and download CLIs
+│   ├── features/         # GameToken schema, NHL/NBA tokenizers, sequence
+│   │                     #   builder, normalization, PyTorch Dataset
 │   ├── models/           # RNN, LSTM, GRU, Transformer, shared MLP head,
 │   │                     #   model registry
 │   ├── train/            # Training loop with MLflow logging, CLI entry point
-│   └── eval/             # Metrics, baselines, calibration plots
+│   └── eval/             # Metrics, baselines, calibration plots, NBA transfer
 ├── configs/              # YAML hyperparameter files per model variant
 ├── notebooks/            # Calibration plots
 ├── tests/                # 28 unit tests

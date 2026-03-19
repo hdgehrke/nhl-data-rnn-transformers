@@ -1,0 +1,27 @@
+model_type: transformer
+run_name: transformer_small_fulldata
+experiment: nhl_transformer_small
+
+# Architecture (same as transformer_small)
+d_model: 128
+nhead: 4
+num_layers: 2
+ffn_dim: 256
+dropout: 0.1
+head_hidden_dim: 128
+
+# Sequence
+seq_len: 45
+
+# Training — all completed seasons as train, 2024-25 as val, no test
+lr: 0.0005
+weight_decay: 0.0001
+batch_size: 256
+epochs: 50
+patience: 10
+
+# Use 2024-25 as val; test_date far in future so no data is held out
+val_date: "2024-10-01"
+test_date: "2030-01-01"
+train_start: 2011
+train_end: 2025

@@ -97,14 +97,18 @@ def main() -> None:
 
     device = get_device()
     model = model.to(device)
-    test_metrics = evaluate_loader(model, test_loader, device)
-    print("\nTest set metrics:")
-    for k, v in test_metrics.items():
-        print(f"  {k}: {v:.4f}")
 
-    import mlflow
-    with mlflow.start_run(run_id=result["run_id"]):
-        mlflow.log_metrics({f"test_{k}": v for k, v in test_metrics.items()})
+    if len(test_data["labels"]) == 0:
+        print("\nNo test set (full-data training config) — skipping test eval.")
+    else:
+        test_metrics = evaluate_loader(model, test_loader, device)
+        print("\nTest set metrics:")
+        for k, v in test_metrics.items():
+            print(f"  {k}: {v:.4f}")
+
+        import mlflow
+        with mlflow.start_run(run_id=result["run_id"]):
+            mlflow.log_metrics({f"test_{k}": v for k, v in test_metrics.items()})
 
 
 if __name__ == "__main__":
