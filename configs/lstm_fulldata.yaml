@@ -1,0 +1,21 @@
+model_type: lstm
+run_name: lstm_fulldata
+experiment: nhl_lstm
+
+hidden_dim: 128
+num_layers: 2
+dropout: 0.1
+head_hidden_dim: 128
+
+seq_len: 45
+
+lr: 0.001
+weight_decay: 0.0001
+batch_size: 256
+epochs: 50
+patience: 10
+
+val_date: "2024-10-01"
+test_date: "2030-01-01"
+train_start: 2011
+train_end: 2025
