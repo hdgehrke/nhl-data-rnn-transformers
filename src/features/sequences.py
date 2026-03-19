@@ -12,8 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.features.schema import FEATURE_NAMES, FEATURE_DIM
-from src.features.normalization import fit_scaler, apply_scaler
+from src.features.schema import FEATURE_NAMES
 
 PROCESSED_DIR = Path(__file__).parents[2] / "data" / "processed"
 
@@ -24,10 +23,18 @@ META_COLS = [
 ]
 
 
-def load_all_processed(seasons: list[str]) -> pd.DataFrame:
+def load_all_processed(seasons: list[str], prefix: str = "games") -> pd.DataFrame:
+    """Load processed parquet files for the given season strings.
+
+    Args:
+        seasons: List of season identifiers (e.g. ["20112012", ...] for NHL,
+                 ["2011", "2012", ...] for MLB/NBA).
+        prefix:  Filename prefix before the season string, e.g. "games" (NHL),
+                 "mlb_games" (MLB), "nba_games" (NBA).
+    """
     dfs = []
     for season in seasons:
-        path = PROCESSED_DIR / f"games_{season}.parquet"
+        path = PROCESSED_DIR / f"{prefix}_{season}.parquet"
         if path.exists():
             dfs.append(pd.read_parquet(path))
     if not dfs:

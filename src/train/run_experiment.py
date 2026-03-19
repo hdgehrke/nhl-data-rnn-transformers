@@ -8,18 +8,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
-import numpy as np
 import yaml
 
-from src.features.sequences import load_all_processed, build_examples, chronological_split
-from src.features.normalization import normalize_split
 from src.features.dataset import make_dataloaders
-from src.models.registry import build_model
-from src.models.base import BaseSequenceModel
-from src.train.trainer import train
+from src.features.normalization import normalize_split
 from src.features.schema import FEATURE_DIM
+from src.features.sequences import build_examples, chronological_split, load_all_processed
+from src.models.registry import build_model
+from src.train.trainer import train
 
 
 def load_config(path: str) -> dict:
@@ -44,11 +41,23 @@ def main() -> None:
     train_start = config.get("train_start", 2011)
     train_end = config.get("train_end", 2024)
 
-    from src.fetch.download import season_str
-    all_seasons = [season_str(y) for y in range(train_start, train_end + 1)]
+    sport = config.get("sport", "nhl")
+    if sport == "nhl":
+        from src.fetch.download import season_str
+        all_seasons = [season_str(y) for y in range(train_start, train_end + 1)]
+        prefix = "games"
+    elif sport == "mlb":
+        all_seasons = [str(y) for y in range(train_start, train_end + 1)]
+        prefix = "mlb_games"
+    elif sport == "nba":
+        from src.fetch.nba_client import nba_season_str
+        all_seasons = [nba_season_str(y) for y in range(train_start, train_end + 1)]
+        prefix = "nba_games"
+    else:
+        raise ValueError(f"Unknown sport: {sport!r}. Expected 'nhl', 'mlb', or 'nba'.")
 
     print("Loading processed data...")
-    df = load_all_processed(all_seasons)
+    df = load_all_processed(all_seasons, prefix=prefix)
     print(f"  {len(df)} team-game rows loaded")
 
     print(f"Building sequences (seq_len={seq_len})...")
@@ -91,9 +100,9 @@ def main() -> None:
     print(f"MLflow run ID: {result['run_id']}")
 
     # Evaluate on test set
+
     from src.eval.metrics import evaluate_loader
     from src.train.trainer import get_device
-    import torch
 
     device = get_device()
     model = model.to(device)
