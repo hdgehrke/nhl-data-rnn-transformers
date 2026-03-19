@@ -16,30 +16,30 @@ Sharing encoder weights between the two teams enforces symmetry and halves the p
 
 ## Results
 
-### seq_len=30 (best configuration)
+### seq_len=45 (best configuration)
 
 | Model | Parameters | Test MAE | Test RMSE | Win Acc |
 |---|---|---|---|---|
-| **Transformer Small** | 311K | **2.176** | 2.582 | **58.2%** |
-| Transformer Medium | 2.28M | 2.180 | **2.580** | 57.9% |
-| GRU | 201K | 2.179 | 2.592 | **58.2%** |
-| LSTM | 255K | 2.196 | 2.596 | 56.4% |
-| RNN | 95K | 2.209 | 2.601 | 57.9% |
+| **Transformer Small** | 311K | **2.149** | **2.564** | 59.1% |
+| Transformer Medium | 2.28M | 2.172 | 2.570 | **59.6%** |
+| LSTM | 255K | 2.166 | 2.576 | 58.8% |
+| GRU | 201K | 2.168 | 2.580 | 58.2% |
+| RNN | 95K | 2.199 | 2.599 | 57.7% |
 | *Baseline: home +0.3* | — | *2.258* | *2.634* | *55.2%* |
 | *Baseline: team avg* | — | *2.272* | *2.640* | *54.2%* |
 | *Baseline: always 0* | — | *2.289* | *2.648* | *0.0%* |
 
 ### Effect of sequence length (Test MAE)
 
-| Model | seq_len=10 | seq_len=20 | seq_len=25 | seq_len=30 |
-|---|---|---|---|---|
-| Transformer Small | 2.220 | **2.195** | 2.184 | **2.176** |
-| Transformer Medium | 2.221 | 2.199 | **2.182** | 2.180 |
-| GRU | 2.224 | 2.210 | 2.189 | **2.179** |
-| LSTM | **2.214** | 2.210 | 2.201 | 2.196 |
-| RNN | 2.231 | 2.208 | 2.206 | 2.209 |
+| Model | 10 | 20 | 25 | 30 | 40 | 45 |
+|---|---|---|---|---|---|---|
+| Transformer Small | 2.220 | 2.195 | 2.184 | 2.176 | 2.163 | **2.149** |
+| Transformer Medium | 2.221 | 2.199 | 2.182 | 2.180 | **2.157** | 2.172 |
+| GRU | 2.224 | 2.210 | 2.189 | 2.179 | 2.174 | 2.168 |
+| LSTM | **2.214** | 2.210 | 2.201 | 2.196 | 2.175 | 2.166 |
+| RNN | 2.231 | 2.208 | 2.206 | 2.209 | 2.230 | 2.199 |
 
-All trained models beat all three baselines at every sequence length. Longer sequences consistently improve the Transformers and GRU — the Transformer Small leads at seq_len=30 on MAE, tied with the GRU on win accuracy at 58.2%. The LSTM and RNN show diminishing returns beyond seq_len=25, as recurrent models struggle to retain signal over longer sequences compared to attention-based models.
+All trained models beat all three baselines at every sequence length. The Transformer Small continues to improve through seq_len=45 (2.149 MAE, 59.1% win acc) with no sign of saturation — attention benefits most from longer context. The LSTM rebounds strongly at longer sequences, nearly matching the GRU by seq_len=45. The RNN is unreliable beyond seq_len=30, oscillating rather than improving consistently. The best model (Transformer Small, seq_len=45) beats the strongest baseline (home +0.3) by 0.109 MAE, compared to only 0.044 at seq_len=10.
 
 ## Features
 
