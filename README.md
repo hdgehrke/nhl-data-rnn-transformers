@@ -1,6 +1,6 @@
-# NHL Game Prediction with RNNs and Transformers
+# NHL/MLB Game Prediction with RNNs and Transformers
 
-An end-to-end machine learning pipeline that predicts NHL game **goal differential** (home team goals − away team goals) using per-team rolling game sequences. Models are trained on 14 seasons of NHL data (2011–2025) and evaluated against several baselines.
+An end-to-end machine learning pipeline that predicts game **run/goal differential** using per-team rolling game sequences. Models are trained on 14 seasons of NHL and MLB data (2011–2024) and evaluated against several baselines. Cross-sport transfer experiments test whether patterns learned from hockey generalize to basketball (NBA).
 
 ## Overview
 
@@ -96,30 +96,69 @@ python -m src.train.run_experiment --config configs/rnn_fulldata.yaml
 python -m src.eval.nba_transfer --nhl-run-id <mlflow_run_id>
 ```
 
+## MLB Results
+
+Five model architectures trained natively on MLB data (2011–2024). **Feature mapping**: runs→goals, hits→shots, errors→giveaways, extra innings→OT flag. NHL-specific features (Corsi, xGoals, power play, physical hits) zero-filled.
+
+**MLB data**: 14 seasons (2011–2024), train 2011–2021, val 2022, test 2023–2024 (~4,860 team-game rows/season; 4,859 test games).
+
+| Model | Parameters | Test MAE | Test RMSE | Win Acc |
+|---|---|---|---|---|
+| **GRU** | 201K | **3.455** | **4.408** | **55.4%** |
+| Transformer Small | 311K | 3.457 | 4.414 | 54.6% |
+| Transformer Medium | 2.28M | 3.457 | 4.416 | 55.0% |
+| LSTM | 255K | 3.468 | 4.415 | 54.9% |
+| RNN | 95K | 3.469 | 4.431 | 54.0% |
+| *Baseline: team avg* | — | *3.523* | *4.459* | *52.2%* |
+| *Baseline: home +0.3* | — | *3.526* | *4.480* | *52.1%* |
+| *Baseline: always 0* | — | *3.538* | *4.467* | *0.0%* |
+
+**Key findings**:
+- All models beat all baselines, but margins are tighter than NHL (best model beats strongest baseline by 0.068 MAE vs 0.109 for NHL). Baseball run differential is inherently harder to predict — high variance, small home advantage (~0.1–0.3 runs), and more randomness per game than hockey.
+- Models are tightly clustered within 0.014 MAE, suggesting the available features (runs, hits, errors, home/away, rest) are close to the predictability ceiling without pitching or advanced stats.
+- The Transformer Medium overfit noticeably (train MSE → 18.0 while val plateaued at 18.6+), indicating the larger architecture has excess capacity relative to the signal in the zero-filled feature space.
+- Win accuracy of 54–55% compares modestly to NHL's 58–60%, consistent with the higher per-game randomness in baseball.
+
+To reproduce:
+```bash
+# Download and process MLB data
+python -m src.fetch.mlb_client --start 2011 --end 2024
+python -m src.features.mlb_tokenizer --start 2011 --end 2024
+
+# Train all models
+python -m src.train.run_experiment --config configs/mlb_rnn.yaml
+python -m src.train.run_experiment --config configs/mlb_lstm.yaml
+python -m src.train.run_experiment --config configs/mlb_gru.yaml
+python -m src.train.run_experiment --config configs/mlb_transformer_small.yaml
+python -m src.train.run_experiment --config configs/mlb_transformer_medium.yaml
+```
+
 ## Features
 
 Each game token is a 28-dimensional vector including:
-- **Outcome**: goals for/against, goal differential, win/loss, OT flag
-- **Volume**: shots for/against, hits, blocks, giveaways, takeaways, PIM
+- **Outcome**: goals/runs for/against, differential, win/loss, OT/extra-innings flag
+- **Volume**: shots/hits for/against, hits, blocks, giveaways, takeaways, PIM
 - **Efficiency**: power-play %, penalty-kill %, shooting %, save %
 - **Context**: home/away flag, rest days since last game, back-to-back flag, game number in season
+
+Sport-specific fields unavailable for a given sport are zero-filled (e.g. Corsi/xGoals/PP% for MLB/NBA).
 
 ## Project Structure
 
 ```
 nhl-data-rnn-transformers/
 ├── data/
-│   ├── raw/              # Raw JSON from NHL API (gitignored)
+│   ├── raw/              # Raw JSON from NHL/MLB/NBA APIs (gitignored)
 │   └── processed/        # Parquet files per season (gitignored)
 ├── src/
-│   ├── fetch/            # NHL + NBA API clients and download CLIs
-│   ├── features/         # GameToken schema, NHL/NBA tokenizers, sequence
+│   ├── fetch/            # NHL, MLB, NBA API clients and download CLIs
+│   ├── features/         # GameToken schema, NHL/MLB/NBA tokenizers, sequence
 │   │                     #   builder, normalization, PyTorch Dataset
 │   ├── models/           # RNN, LSTM, GRU, Transformer, shared MLP head,
 │   │                     #   model registry
 │   ├── train/            # Training loop with MLflow logging, CLI entry point
 │   └── eval/             # Metrics, baselines, calibration plots, NBA transfer
-├── configs/              # YAML hyperparameter files per model variant
+├── configs/              # YAML hyperparameter files per model/sport variant
 ├── notebooks/            # Calibration plots
 ├── tests/                # 28 unit tests
 ├── requirements.txt
@@ -138,31 +177,16 @@ Requires Python 3.11+. Training uses Apple MPS automatically on M-series Macs, f
 
 ## Running the Pipeline
 
-### 1. Download raw game data
-
-Fetches regular-season game records from `api.nhle.com` for each season and saves them as JSON to `data/raw/`.
+### NHL
 
 ```bash
+# 1. Download raw game data (api.nhle.com)
 python -m src.fetch.download --start 2011 --end 2024
-```
 
-The 2004–05 season (cancelled lockout) is skipped automatically. Short seasons (2012–13, 2020–21) are included as-is.
-
-### 2. Process into Parquet
-
-Parses raw JSON into per-team game tokens, computes rest days, back-to-back flags, and game numbers, and saves one Parquet file per season to `data/processed/`.
-
-```bash
+# 2. Process into Parquet (data/processed/games_XXXXXXXX.parquet)
 python -m src.features.tokenizer
-```
 
-Each season produces approximately 2× the number of games (one row per team per game).
-
-### 3. Train a model
-
-Train any model variant using its YAML config. Experiments are logged to MLflow automatically.
-
-```bash
+# 3. Train models
 python -m src.train.run_experiment --config configs/lstm_base.yaml
 python -m src.train.run_experiment --config configs/gru_base.yaml
 python -m src.train.run_experiment --config configs/rnn_base.yaml
@@ -170,13 +194,28 @@ python -m src.train.run_experiment --config configs/transformer_small.yaml
 python -m src.train.run_experiment --config configs/transformer_medium.yaml
 ```
 
-You can override the sequence length at the command line:
+The 2004–05 season (cancelled lockout) is skipped automatically. You can override sequence length: `--seq-len 20`.
+
+### MLB
 
 ```bash
-python -m src.train.run_experiment --config configs/lstm_base.yaml --seq-len 20
+# 1. Download raw game data (statsapi.mlb.com — one call per season)
+python -m src.fetch.mlb_client --start 2011 --end 2024
+
+# 2. Process into Parquet (data/processed/mlb_games_{year}.parquet)
+python -m src.features.mlb_tokenizer --start 2011 --end 2024
+
+# 3. Train models
+python -m src.train.run_experiment --config configs/mlb_rnn.yaml
+python -m src.train.run_experiment --config configs/mlb_lstm.yaml
+python -m src.train.run_experiment --config configs/mlb_gru.yaml
+python -m src.train.run_experiment --config configs/mlb_transformer_small.yaml
+python -m src.train.run_experiment --config configs/mlb_transformer_medium.yaml
 ```
 
-Training uses AdamW with a ReduceLROnPlateau scheduler and early stopping (patience=10). On an M2 Mac, RNN/LSTM/GRU train in under a minute; Transformers take 2–5 minutes.
+The 2020 season was shortened (60 games); it is included as-is.
+
+Training uses AdamW with a ReduceLROnPlateau scheduler and early stopping (patience=10). On an M2 Mac, RNN/LSTM/GRU train in under 2 minutes per sport; Transformers take 5–20 minutes.
 
 ### 4. Run baselines
 

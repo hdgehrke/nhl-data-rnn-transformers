@@ -1,5 +1,5 @@
 sport: mlb
-model_type: transformer_small
+model_type: transformer
 run_name: mlb_transformer_small
 experiment: mlb_transformer_small
 
