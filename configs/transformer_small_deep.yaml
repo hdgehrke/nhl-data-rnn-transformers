@@ -1,0 +1,24 @@
+model_type: transformer
+run_name: transformer_small_deep
+experiment: nhl_transformer_small_deep
+
+# Architecture — small but deeper: same d_model as small, double the layers
+d_model: 128
+nhead: 4
+num_layers: 4
+ffn_dim: 256
+dropout: 0.1
+head_hidden_dim: 128
+
+seq_len: 45
+
+lr: 0.0003
+weight_decay: 0.0001
+batch_size: 256
+epochs: 50
+patience: 10
+
+val_date: "2022-10-01"
+test_date: "2023-10-01"
+train_start: 2011
+train_end: 2024

@@ -1,0 +1,22 @@
+model_type: rnn
+run_name: rnn_large
+experiment: nhl_rnn
+
+# Architecture — wider: 2x hidden dim
+hidden_dim: 256
+num_layers: 2
+dropout: 0.1
+head_hidden_dim: 256
+
+seq_len: 45
+
+lr: 0.001
+weight_decay: 0.0001
+batch_size: 256
+epochs: 50
+patience: 10
+
+val_date: "2022-10-01"
+test_date: "2023-10-01"
+train_start: 2011
+train_end: 2024
