@@ -14,22 +14,56 @@ Team B: [game_1, ..., game_N] → Encoder → embed_B
 
 Sharing encoder weights between the two teams enforces symmetry and halves the parameter count.
 
-## Results
+## NHL Results
 
-### seq_len=45 (best configuration)
+### Architecture sweep at seq_len=45
 
-| Model | Parameters | Test MAE | Test RMSE | Win Acc |
-|---|---|---|---|---|
-| **Transformer Small** | 311K | **2.149** | **2.564** | 59.1% |
-| Transformer Medium | 2.28M | 2.172 | 2.570 | **59.6%** |
-| LSTM | 255K | 2.166 | 2.576 | 58.8% |
-| GRU | 201K | 2.168 | 2.580 | 58.2% |
-| RNN | 95K | 2.199 | 2.599 | 57.7% |
-| *Baseline: home +0.3* | — | *2.258* | *2.634* | *55.2%* |
-| *Baseline: team avg* | — | *2.272* | *2.640* | *54.2%* |
-| *Baseline: always 0* | — | *2.289* | *2.648* | *0.0%* |
+19 model configurations (4 variants per RNN/LSTM/GRU family + 7 transformer variants) trained on NHL data at seq_len=45. All beat all three baselines.
 
-### Effect of sequence length (Test MAE)
+#### RNN family
+
+| Variant | Parameters | hidden_dim | layers | MAE (sl=20) | MAE (sl=25) | MAE (sl=45) | Win Acc (sl=45) |
+|---|---|---|---|---|---|---|---|
+| base | 95K | 128 | 2 | 2.208 | 2.206 | 2.199 | 57.7% |
+| small | 29K | 64 | 1 | 2.201 | 2.200 | **2.187** | **58.2%** |
+| large | 362K | 256 | 2 | 2.214 | 2.203 | 2.193 | 57.8% |
+| deep | 193K | 128 | 4 | 2.207 | 2.207 | 2.235 | 55.7% |
+
+#### LSTM family
+
+| Variant | Parameters | hidden_dim | layers | MAE (sl=20) | MAE (sl=25) | MAE (sl=45) | Win Acc (sl=45) |
+|---|---|---|---|---|---|---|---|
+| **small** | **36K** | 64 | 1 | **2.199** | **2.191** | **2.164** | **59.4%** |
+| base | 255K | 128 | 2 | 2.210 | 2.201 | 2.166 | 58.8% |
+| deep | 509K | 128 | 4 | 2.205 | 2.201 | 2.179 | 58.7% |
+| large | 1.01M | 256 | 2 | 2.206 | 2.202 | 2.183 | 58.4% |
+
+#### GRU family
+
+| Variant | Parameters | hidden_dim | layers | MAE (sl=20) | MAE (sl=25) | MAE (sl=45) | Win Acc (sl=45) |
+|---|---|---|---|---|---|---|---|
+| **deep** | **402K** | 128 | 4 | 2.199 | 2.192 | **2.159** | 57.7% |
+| base | 201K | 128 | 2 | 2.210 | 2.189 | 2.168 | 58.2% |
+| small | 50K | 64 | 1 | 2.198 | 2.189 | 2.168 | **58.3%** |
+| large | 802K | 256 | 2 | 2.193 | 2.189 | 2.186 | 58.6% |
+
+#### Transformer family
+
+| Variant | Parameters | d_model | layers | MAE (sl=20) | MAE (sl=25) | MAE (sl=45) | Win Acc (sl=45) |
+|---|---|---|---|---|---|---|---|
+| **small** | **311K** | 128 | 2 | **2.195** | **2.184** | **2.149** | 59.1% |
+| medium_shallow | 1.14M | 256 | 2 | 2.199 | 2.192 | 2.149 | 59.4% |
+| large | 9.08M | 512 | 4 | 2.200 | 2.207 | 2.151 | **59.4%** |
+| small_deep | 622K | 128 | 4 | 2.195 | 2.189 | 2.158 | 59.3% |
+| deep | 2.28M | 256 | 6 | 2.191 | 2.185 | 2.156 | 58.9% |
+| tiny | 79K | 64 | 2 | 2.202 | 2.184 | 2.160 | 58.9% |
+| medium | 2.28M | 256 | 4 | 2.199 | 2.182 | 2.172 | **59.6%** |
+
+| *Baseline: home +0.3* | — | — | — | — | — | *2.258* | *55.2%* |
+| *Baseline: team avg* | — | — | — | — | — | *2.272* | *54.2%* |
+| *Baseline: always 0* | — | — | — | — | — | *2.289* | *0.0%* |
+
+### Effect of sequence length — original 5 models (Test MAE)
 
 | Model | 10 | 20 | 25 | 30 | 40 | 45 |
 |---|---|---|---|---|---|---|
@@ -39,7 +73,14 @@ Sharing encoder weights between the two teams enforces symmetry and halves the p
 | LSTM | **2.214** | 2.210 | 2.201 | 2.196 | 2.175 | 2.166 |
 | RNN | 2.231 | 2.208 | 2.206 | 2.209 | 2.230 | 2.199 |
 
-All trained models beat all three baselines at every sequence length. The Transformer Small continues to improve through seq_len=45 (2.149 MAE, 59.1% win acc) with no sign of saturation — attention benefits most from longer context. The LSTM rebounds strongly at longer sequences, nearly matching the GRU by seq_len=45. The RNN is unreliable beyond seq_len=30, oscillating rather than improving consistently. The best model (Transformer Small, seq_len=45) beats the strongest baseline (home +0.3) by 0.109 MAE, compared to only 0.044 at seq_len=10.
+**Key findings across the architecture sweep:**
+- All 19 configurations beat all three baselines at every sequence length tested.
+- **Transformers dominate at seq_len=45** — the top 4 MAE scores all belong to transformer variants. The Transformer Small (2.149) and Medium Shallow (2.149) tie for best MAE; Medium has the best win accuracy (59.6%).
+- **Bigger ≠ better for transformers**: The 9M-parameter Large barely edges the 311K Small (2.151 vs 2.149 MAE), suggesting the task saturates well below maximum capacity.
+- **LSTM Small surprises**: The single-layer 36K LSTM (2.164 MAE, 59.4% win acc) matches the full 255K base LSTM — strong inductive bias for sequential data at this scale.
+- **RNN degrades with depth**: rnn_deep (4 layers) is the *worst* RNN variant at seq_len=45 (2.235 MAE, 55.7% win acc), consistent with vanishing gradient issues.
+- **GRU benefits from depth**: gru_deep (4 layers, 2.159 MAE) is the best GRU variant, outperforming gru_large despite fewer parameters.
+- At shorter seq_lens (20–25), differences between variants compress significantly — architecture matters most when longer context is available.
 
 ## NBA Cross-Sport Transfer
 
