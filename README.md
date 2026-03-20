@@ -174,6 +174,16 @@ python -m src.train.run_experiment --config configs/mlb_transformer_small.yaml
 python -m src.train.run_experiment --config configs/mlb_transformer_medium.yaml
 ```
 
+## Metrics
+
+**MAE (Mean Absolute Error)** is the primary metric. For NHL it measures average error in *goals* of predicted vs actual goal differential; for MLB it measures average error in *runs*. A model with MAE=2.15 on NHL data is off by 2.15 goals on average — roughly one scoring chance worth of error per game. Lower is better.
+
+**RMSE (Root Mean Squared Error)** penalises large errors more heavily than MAE. It is reported alongside MAE but MAE is easier to interpret as a "typical error".
+
+**Win Direction Accuracy** measures what fraction of games the model correctly predicts the winner (sign of the differential). A coin flip scores 50%; the home-advantage baseline scores ~55% (NHL) / ~52% (MLB). All trained models exceed these baselines.
+
+For context: the average NHL game goal differential in the test set is ~1.5 goals, and games decided by 1 goal account for ~30% of results, so even small MAE improvements represent meaningful predictive signal.
+
 ## Features
 
 Each game token is a 28-dimensional vector including:
