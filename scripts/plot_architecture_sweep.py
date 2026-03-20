@@ -87,19 +87,19 @@ DATA: dict[tuple[str, str], tuple[float, float, float]] = {
 # ------------------------------------------------------------------
 FAMILIES: dict[str, list[tuple[str, str]]] = {
     "RNN": [
-        ("base", "rnn_base"),
+        ("base\n(128-dim, 2L)", "rnn_base"),
         ("small\n(64-dim, 1L)", "rnn_small"),
         ("large\n(256-dim, 2L)", "rnn_large"),
         ("deep\n(128-dim, 4L)", "rnn_deep"),
     ],
     "LSTM": [
-        ("base", "lstm_base"),
+        ("base\n(128-dim, 2L)", "lstm_base"),
         ("small\n(64-dim, 1L)", "lstm_small"),
         ("large\n(256-dim, 2L)", "lstm_large"),
         ("deep\n(128-dim, 4L)", "lstm_deep"),
     ],
     "GRU": [
-        ("base", "gru_base"),
+        ("base\n(128-dim, 2L)", "gru_base"),
         ("small\n(64-dim, 1L)", "gru_small"),
         ("large\n(256-dim, 2L)", "gru_large"),
         ("deep\n(128-dim, 4L)", "gru_deep"),
