@@ -90,6 +90,12 @@ All five NHL model families were trained on the full dataset (2011–2024, no te
 
 **NBA data**: 10 seasons (2015–2025), split into train 2015–2021, val 2021-22, test 2022–2024 (3,685 games).
 
+### Transfer methods
+
+**Zero-shot transfer** applies the NHL-trained model directly to NBA games without any NBA-specific training. The NHL weights are frozen and the model must rely entirely on patterns it learned from hockey — things like home-court advantage, rest effects, and recent form — to predict basketball point differentials. Because the feature schema is shared across sports, no architectural changes are needed; the model simply reads NBA game stats through the same 28-feature token format (with hockey-only fields zeroed out). This tests whether the sequential momentum representations are sport-agnostic.
+
+**Fine-tuning** starts from the NHL-pretrained weights and continues training on NBA data (2015–2021 training split) using the same AdamW optimizer and early stopping as the original training run. All weights — encoder and MLP head — are updated. This adapts the model to the NBA's different scoring scale (~10× larger point differentials than NHL goals) and any sport-specific temporal patterns. The test set (2022–2024) is held out from both the NHL training and the NBA fine-tuning phases.
+
 ### Zero-shot results (NHL weights, no NBA training)
 
 | Model | MAE | RMSE | Win Acc |
